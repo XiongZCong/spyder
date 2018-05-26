@@ -5,9 +5,10 @@ import json
 import re
 from bs4 import BeautifulSoup
 import pymongo
+from multiprocessing import Pool
 from config import *
 
-client=pymongo.MongoClient(MONGO_URL)
+client=pymongo.MongoClient(MONGO_URL, connect=False)
 db=client[MONGO_DB]
 
 def save_to_mongo(result):
@@ -66,22 +67,45 @@ def parse_page_detail(html,url):
         if data and 'sub_images' in data.keys():
             sub_images=data.get('sub_images')
             images=[item.get('url') for item in sub_images]
+#            for image in images: download_image(image)
             return {
                     'title':title,
                     'url':url,
                     'images':images                    
                     }
 
-def main():
-    html=get_page_index(0,'街拍')
+def download_image(url):
+    print('Downloading', url)
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            save_image(response.content)
+        return None
+    except ConnectionError:
+        return None
+
+
+def save_image(content):
+    file_path = '{0}/{1}.{2}'.format(os.getcwd(), md5(content).hexdigest(), 'jpg')
+    print(file_path)
+    if not os.path.exists(file_path):
+        with open(file_path, 'wb') as f:
+            f.write(content)
+            f.close()
+
+def main(offset):
+    html=get_page_index(offset,'街拍')
     for url in parse_page_index(html):
         html=get_page_detail(url)
-       # print(html)
         if html:            
             result=parse_page_detail(html,url)
             if result:
                 save_to_mongo(result)
     
 if __name__ == '__main__':
-    main()
+    pool = Pool()
+    groups = ([x * 20 for x in range(1, 20 + 1)])
+    pool.map(main, groups)
+    pool.close()
+    pool.join()
 

@@ -46,7 +46,6 @@ def parse_one_page(html):
  
 def main(offset):
      url='http://maoyan.com/board/4?offset='+str(offset)
-     print(2)
      html=get_on_page(url)
      parse_one_page(html)
      for item in parse_one_page(html):
@@ -55,7 +54,6 @@ def main(offset):
 
      
 if __name__ == '__main__':
-    print(1)
     pool = Pool()
     pool.map(main,[i*10 for i in range(10)])
 #    for i in range(10):
